@@ -41,6 +41,21 @@ var cmdServe = &cobra.Command{
 		wg := sync.WaitGroup{}
 		wg.Add(1)
 
+		// Pidfile
+		if cnf.PidFile != "" {
+			wg.Add(1)
+			go func() {
+				ctx, _ := context.WithCancel(ctx)
+
+				if err := misc.WithPidFile(ctx, cnf.PidFile); err != nil {
+					log.Errorf("error while handling pidfile: %v", err)
+				}
+
+				cancel()
+				wg.Done()
+			}()
+		}
+
 		// Control socket
 		wg.Add(1)
 		go func() {

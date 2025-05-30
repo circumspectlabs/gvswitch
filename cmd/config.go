@@ -15,6 +15,7 @@ type Config struct {
 	Config    string       `json:"-" mapstructure:"config"`
 	LogLevel  string       `json:"log-level,omitempty" yaml:"log-level,omitempty" mapstructure:"log-level"`
 	LogFormat string       `json:"log-format,omitempty" yaml:"log-format,omitempty" mapstructure:"log-format"`
+	PidFile   string       `json:"pid-file,omitempty" yaml:"pid-file,omitempty" mapstructure:"pid-file"`
 	Daemon    bool         `json:"daemon,omitempty" yaml:"daemon,omitempty" mapstructure:"daemon"`
 	Listen    string       `json:"listen,omitempty" yaml:"listen,omitempty" mapstructure:"listen"`
 	Stack     stack.Config `json:"stack" yaml:"stack" mapstructure:"stack"`
@@ -29,6 +30,7 @@ var cmdConfig = &cobra.Command{
 }
 
 func initConfig() {
+	viper.SetDefault("pid-file", "")
 	viper.SetDefault("stack.mtu", 1500)
 	viper.SetDefault("stack.subnet", "192.168.127.0/24")
 	viper.SetDefault("stack.gateway.ip", "<DETECT LATER>")

@@ -12,7 +12,6 @@ var rConfig string
 var rLogLevel string
 var rLogFormat string
 var rDaemon bool
-var rDebug bool
 var rcmd = &cobra.Command{
 	Use:   "gvswitch -c config.yaml [-l debug] ... ",
 	Short: "A completely userspace low-privileged virtual switch for QEMU VMs",
@@ -20,10 +19,10 @@ var rcmd = &cobra.Command{
 }
 
 func init() {
+	// global flags
 	rcmd.PersistentFlags().StringVarP(&rConfig, "config", "c", "", "config file")
 	rcmd.PersistentFlags().StringVarP(&rLogLevel, "log-level", "l", "", "log level: \"fatal\", \"error\", \"info\", \"debug\", or \"trace\" (default \"info\")")
 	rcmd.PersistentFlags().StringVar(&rLogFormat, "log-format", "", "log format: \"text\" or \"json\" (default \"text\")")
-	rcmd.PersistentFlags().BoolVarP(&rDaemon, "daemon", "d", false, "run as systemd service with notify call")
 	viper.BindPFlag("config", rcmd.PersistentFlags().Lookup("config"))
 	viper.BindEnv("config", "GVSWITCH_CONFIG")
 	viper.BindPFlag("log-level", rcmd.PersistentFlags().Lookup("log-level"))
@@ -32,7 +31,10 @@ func init() {
 	viper.BindPFlag("log-format", rcmd.PersistentFlags().Lookup("log-format"))
 	viper.BindEnv("log-format", "GVSWITCH_LOG_FORMAT")
 	viper.SetDefault("log-format", "text")
-	viper.BindPFlag("daemon", rcmd.PersistentFlags().Lookup("daemon"))
+
+	// serve command flags
+	cmdServe.Flags().BoolVarP(&rDaemon, "daemon", "d", false, "run as systemd service with notify call")
+	viper.BindPFlag("daemon", cmdServe.Flags().Lookup("daemon"))
 	viper.BindEnv("daemon", "GVSWITCH_DAEMON")
 	viper.SetDefault("daemon", false)
 
@@ -48,10 +50,6 @@ func init() {
 
 	rcmd.AddCommand(cmdServe)
 }
-
-// func preInitLogsInterface(cmd *cobra.Command, args []string) error {
-// 	return initLogs(rLogLevel, rLogFormat)
-// }
 
 func initLogs(l string, f string) error {
 	text := &log.TextFormatter{
