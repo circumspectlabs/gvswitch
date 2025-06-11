@@ -1,4 +1,4 @@
-name: Matrix Example (main)
+name: Build and Release
 on:
   push:
     branches:
@@ -14,7 +14,7 @@ jobs:
           - { runner: macos-latest,  os: darwin,  arch: amd64, tags: netcgo        }
           - { runner: macos-latest,  os: darwin,  arch: arm64, tags: netcgo        }
           - { runner: ubuntu-latest, os: linux,   arch: amd64, env:  CGO_ENABLED=0 }
-          - { runner: ubuntu-latest, os: linux,   arch: amd64, env:  CGO_ENABLED=0 }
+          - { runner: ubuntu-latest, os: linux,   arch: arm64, env:  CGO_ENABLED=0 }
           - { runner: ubuntu-latest, os: windows, arch: amd64, env:  CGO_ENABLED=0 }
     steps:
       - uses: actions/checkout@v3
@@ -24,6 +24,7 @@ jobs:
           fetch-tags: true
       - name: Set variables
         id: vars
+        shell: bash
         run: |-
           # binary_version
           if echo "${{ github.ref_name }}" | grep -Eo '^v[0-9]+\.[0-9]+(\.[0-9]+)?$'; then
@@ -51,9 +52,46 @@ jobs:
                 -buildvcs=false \
                 -tags="${{ matrix.tags }}" \
                 -ldflags "
+                  -s -w
                   -X 'cmd.version=$PRODUCT_VERSION'
                 "
-      - name: DEBUG
+  release:
+    runs-on: ubuntu-latest
+    # if: github.ref_type == 'tag'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          clean: true
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Set variables
+        id: vars
+        shell: bash
         run: |-
-          ls -al
-          file gvswitch
+          # binary_version
+          if echo "${{ github.ref_name }}" | grep -Eo '^v[0-9]+\.[0-9]+(\.[0-9]+)?$'; then
+            echo "binary_version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "binary_version=$(git describe --tags $(git rev-list --tags --max-count=1))-$(echo "${{ github.ref_name }}" | tr './\\+_= ' '-')" >> $GITHUB_OUTPUT
+          fi
+
+          rm -rf dist || true
+          mkdir -p dist
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Draft release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/*
+          tag: ${{ github.ref }}
+          release_name: "gvswitch-${{ steps.vars.outputs.binary_version }}"
+          overwrite: true
+          file_glob: true
+          body: |-
+            TODO
+          draft: true
+          prerelease: "${{ github.ref_type == 'branch' }}"
+          make_latest: "${{ github.ref_type == 'tag' }}"
